@@ -3,6 +3,13 @@ from sklearn.metrics.pairwise import cosine_similarity
 from scipy.sparse import csr_matrix
 
 def item_base_CF(target_book_id, rating_data):
+    """
+    自己实现的基于物品相似度的协同过滤推荐，仅适用于规模不太大的数据集。输入目标书籍id，以及用户-书籍评分数据，返回用户推荐列表，可将这本书推荐给这些用户
+
+    :param target_book_id:目标书籍的ISBN
+    :param rating_data:用户-书籍评分数据
+    :return:可将这本书推荐至的用户列表
+    """
     # 构造User-book矩阵，随后构建稀疏矩阵，计算相似度
     user_book_matrix = rating_data.pivot(index="User-ID", columns="ISBN", values="Book-Rating").fillna(0)
     sparse_matrix = csr_matrix(user_book_matrix.values)
@@ -30,4 +37,9 @@ def item_base_CF(target_book_id, rating_data):
         user_avg_score = rating_data[rating_data["User-ID"] == user_id]["Book-Rating"].mean()
         if score_pred >= user_avg_score:
             user_recommended.append(user_id)
+    # 修正结果，如果推荐列表中有人已经购买过该书籍，则去除这些人，以避免重复无效推荐
+    buyer_list = rating_data[rating_data["ISBN"] == target_book_id]["User-ID"].tolist()
+    for one_user in user_recommended:
+        if one_user in buyer_list:
+            user_recommended.remove(one_user)
     return user_recommended
